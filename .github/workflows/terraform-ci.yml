@@ -65,10 +65,11 @@ jobs:
         continue-on-error: true
 
       - name: Run TFLint
-        uses: terraform-linters/tflint-action@v4
+        uses: reviewdog/action-tflint@v1.17.0
         with:
-          format: compact
-          config: .tflint.hcl
+          github_token: ${{ secrets.github_token }}
+          filter_mode: nofilter
+          fail_on_error: true
 
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
