@@ -47,14 +47,11 @@ jobs:
           terraform fmt -check -recursive -diff
         continue-on-error: true
 
-      - name: Run TFLint
-        uses: reviewdog/action-tflint@v1.17.0
+      - uses: reviewdog/action-tflint@v1.17.0
         with:
           github_token: ${{ secrets.github_token }}
-          reporter: github-check
           filter_mode: nofilter
           fail_on_error: true
-          tflint_rulesets: terraform
 
       - name: Prepare Security Scans
         run: mkdir -p reports
