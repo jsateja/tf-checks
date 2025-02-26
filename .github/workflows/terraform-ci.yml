@@ -133,30 +133,27 @@ jobs:
       - name: Post Results Summary
         if: always()
         run: |
-          {
-            echo "### Terraform CI Results :rocket:"
-            echo "#### Format Check"
-            echo "\`${{ steps.fmt.outcome }}\`"
-            echo "#### Validation"
-            echo "\`${{ steps.validate.outcome }}\`"
-            if [ -f reports/tfsec.sarif ]; then
-              echo "#### TFSec Scan"
-              echo "✅ Completed - Check Security tab for details"
-            fi
-            if [ -f reports/checkov.sarif ]; then
-              echo "#### Checkov Scan"
-              echo "✅ Completed - Check Security tab for details"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "summary<<EOF" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Terraform CI Results :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Format Check" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${{ steps.fmt.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${{ steps.validate.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f reports/tfsec.sarif ]; then
+            echo "#### TFSec Scan" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Completed - Check Security tab for details" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f reports/checkov.sarif ]; then
+            echo "#### Checkov Scan" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Completed - Check Security tab for details" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "EOF" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set Job Outputs
         id: set_outputs
         run: |
-          # Format check status
           echo "fmt_status=${{ steps.fmt.outcome }}" >> "$GITHUB_OUTPUT"
-          # Validation status
           echo "validate_status=${{ steps.validate.outcome }}" >> "$GITHUB_OUTPUT"
-          # Security scan status
           if [ -f reports/tfsec.sarif ] && [ -f reports/checkov.sarif ]; then
             echo "security_scans_complete=true" >> "$GITHUB_OUTPUT"
           else
