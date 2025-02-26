@@ -29,4 +29,4 @@ variable "environment" {
 variable "user_object_id" {
   description = "Azure AD Object ID of the user to grant permissions"
   type        = string
-} 
+}

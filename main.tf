@@ -43,7 +43,7 @@ resource "azurerm_storage_account" "storage" {
   account_replication_type = "LRS"
 
   enable_https_traffic_only = true
-  min_tls_version          = "TLS1_2"
+  min_tls_version           = "TLS1_2"
 }
 
 # Network Security Group
@@ -58,9 +58,9 @@ resource "azurerm_network_security_group" "nsg" {
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
-    source_port_range         = "*"
-    destination_port_range    = "22"
-    source_address_prefix     = "*"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 }

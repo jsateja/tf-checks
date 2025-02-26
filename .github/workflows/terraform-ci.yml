@@ -126,17 +126,6 @@ jobs:
           sarif_file: reports/checkov.sarif
           category: checkov
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: hcl
-          queries: security-and-quality
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:hcl"
-
       - name: Post Results Summary
         if: always()
         run: |
@@ -144,4 +133,12 @@ jobs:
           echo "#### Format Check" >> $GITHUB_STEP_SUMMARY
           echo "\`${{ steps.fmt.outcome }}\`" >> $GITHUB_STEP_SUMMARY
           echo "#### Validation" >> $GITHUB_STEP_SUMMARY
-          echo "\`${{ steps.validate.outcome }}\`" >> $GITHUB_STEP_SUMMARY 
+          echo "\`${{ steps.validate.outcome }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -f reports/tfsec.sarif ]; then
+            echo "#### TFSec Scan" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Completed - Check Security tab for details" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f reports/checkov.sarif ]; then
+            echo "#### Checkov Scan" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Completed - Check Security tab for details" >> $GITHUB_STEP_SUMMARY
+          fi

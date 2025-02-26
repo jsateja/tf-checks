@@ -43,4 +43,4 @@ rule "terraform_comment_syntax" {
 
 rule "terraform_typed_variables" {
   enabled = true
-} 
+}

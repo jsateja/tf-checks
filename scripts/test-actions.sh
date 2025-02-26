@@ -25,4 +25,4 @@ if [ -n "$JOB" ]; then
 else
     echo "👉 Running all jobs"
     act "$EVENT" --bind
-fi 
+fi

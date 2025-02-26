@@ -50,4 +50,4 @@ Desktop.ini
 # Act local testing
 .env.act
 /tmp/
-.act.secrets 
+.act.secrets

@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+        args:
+          - --args=-diff
+          - --args=-write=false
+      - id: terraform_validate
+        args:
+          - --args=-json
+      # Optional hooks - commented out by default
+      # - id: terraform_tflint
+      #   args:
+      #     - --args=--config=.tflint.hcl
+      # - id: terraform_tfsec
+      # - id: terraform_checkov
+
+  # Optional documentation hook - commented out by default
+  # - repo: https://github.com/terraform-docs/terraform-docs
+  #   rev: v0.17.0
+  #   hooks:
+  #     - id: terraform-docs-go
+  #       args: ["markdown", "table", "--output-file", "README.md", "."]
