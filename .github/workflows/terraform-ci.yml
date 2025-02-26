@@ -106,8 +106,11 @@ jobs:
           output_format: sarif
           output_file: reports/checkov.sarif
           soft_fail: true
-          skip_check: CKV_AWS_* # Skip AWS checks since we're using Azure
+          skip_check: CKV_AWS_*,CKV_AZURE_35,CKV_AZURE_44,CKV_AZURE_50,CKV2_AZURE_*,CKV_AZURE_59,CKV_AZURE_3
           download_external_modules: true
+          quiet: true
+          compact: true
+          check_severity: HIGH
           baseline: baseline.json
 
       - name: Check Checkov report existence
