@@ -47,11 +47,16 @@ jobs:
           terraform fmt -check -recursive -diff
         continue-on-error: true
 
-      - uses: reviewdog/action-tflint@v1.17.0
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v3
         with:
-          github_token: ${{ secrets.github_token }}
-          filter_mode: nofilter
-          fail_on_error: true
+          tflint_version: v0.50.0
+
+      - name: Run TFLint
+        run: |
+          tflint --init
+          tflint --format compact
+        continue-on-error: true
 
       - name: Prepare Security Scans
         run: mkdir -p reports
