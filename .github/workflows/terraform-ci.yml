@@ -82,9 +82,18 @@ jobs:
           out: reports/tfsec.sarif
           additional_args: --minimum-severity HIGH
 
+      - name: Check tfsec report existence
+        id: check_tfsec
+        run: |
+          if [ -f reports/tfsec.sarif ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload tfsec SARIF report
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && fileExists('reports/tfsec.sarif')
+        if: always() && steps.check_tfsec.outputs.exists == 'true'
         with:
           sarif_file: reports/tfsec.sarif
           category: tfsec
@@ -101,9 +110,18 @@ jobs:
           download_external_modules: true
           baseline: baseline.json
 
+      - name: Check Checkov report existence
+        id: check_checkov
+        run: |
+          if [ -f reports/checkov.sarif ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Checkov SARIF report
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && fileExists('reports/checkov.sarif')
+        if: always() && steps.check_checkov.outputs.exists == 'true'
         with:
           sarif_file: reports/checkov.sarif
           category: checkov
