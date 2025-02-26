@@ -71,19 +71,22 @@ jobs:
           filter_mode: nofilter
           fail_on_error: true
 
+      - name: Create reports directory
+        run: mkdir -p reports
+
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
           soft_fail: true
           format: sarif
-          out: tfsec.sarif
+          out: reports/tfsec.sarif
           additional_args: --minimum-severity HIGH
 
       - name: Upload tfsec SARIF report
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && fileExists('reports/tfsec.sarif')
         with:
-          sarif_file: tfsec.sarif
+          sarif_file: reports/tfsec.sarif
           category: tfsec
 
       - name: Run Checkov
@@ -92,27 +95,27 @@ jobs:
           directory: .
           framework: terraform
           output_format: sarif
-          output_file: checkov.sarif
+          output_file: reports/checkov.sarif
           soft_fail: true
           skip_check: CKV_AWS_* # Skip AWS checks since we're using Azure
           download_external_modules: true
           baseline: baseline.json
 
       - name: Upload Checkov SARIF report
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && fileExists('reports/checkov.sarif')
         with:
-          sarif_file: checkov.sarif
+          sarif_file: reports/checkov.sarif
           category: checkov
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: hcl
           queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:hcl"
 
