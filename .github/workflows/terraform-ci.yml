@@ -86,9 +86,9 @@ jobs:
         id: check_tfsec
         run: |
           if [ -f reports/tfsec.sarif ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload tfsec SARIF report
@@ -104,22 +104,22 @@ jobs:
           directory: .
           framework: terraform
           output_format: sarif
-          output_file: reports/checkov.sarif
+          output_file_path: reports/checkov.sarif
           soft_fail: true
           skip_check: CKV_AWS_*,CKV_AZURE_35,CKV_AZURE_44,CKV_AZURE_50,CKV2_AZURE_*,CKV_AZURE_59,CKV_AZURE_3
           download_external_modules: true
           quiet: true
           compact: true
-          check_severity: HIGH
+          soft_fail_on: LOW,MEDIUM
           baseline: baseline.json
 
       - name: Check Checkov report existence
         id: check_checkov
         run: |
           if [ -f reports/checkov.sarif ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload Checkov SARIF report
