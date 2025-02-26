@@ -17,61 +17,43 @@ jobs:
     name: Terraform Security & Format Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     permissions:
       security-events: write
       contents: read
       actions: read
-      pull-requests: write  # Needed for PR comments
+      pull-requests: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.7.0"
           terraform_wrapper: false
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Cache Terraform
-        uses: actions/cache@v3
+      - uses: actions/cache@v3
         with:
           path: .terraform
           key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: |
             ${{ runner.os }}-terraform-
 
-      - name: Initialize Terraform
-        id: init
-        run: terraform init -backend=false
-        continue-on-error: true
-
-      - name: Check Init Status
-        if: steps.init.outcome == 'failure'
+      - name: Initialize and Validate Terraform
+        id: tf_init_validate
         run: |
-          echo "Terraform initialization failed!"
-          exit 1
-
-      - name: Validate Terraform
-        id: validate
-        run: terraform validate -json
+          terraform init -backend=false
+          terraform validate -json
+          terraform fmt -check -recursive -diff
         continue-on-error: true
 
-      - name: Check Terraform Formatting
-        id: fmt
-        run: terraform fmt -check -recursive -diff
-        continue-on-error: true
-
-      - name: Run TFLint
-        uses: reviewdog/action-tflint@v1.17.0
+      - uses: reviewdog/action-tflint@v1.17.0
         with:
           github_token: ${{ secrets.github_token }}
           filter_mode: nofilter
           fail_on_error: true
 
-      - name: Create reports directory
+      - name: Prepare Security Scans
         run: mkdir -p reports
 
       - name: Run tfsec
@@ -79,25 +61,9 @@ jobs:
         with:
           soft_fail: true
           format: sarif
-          additional_args: >
+          additional_args: |
             --minimum-severity HIGH
             --out reports/tfsec.sarif
-
-      - name: Check tfsec report existence
-        id: check_tfsec
-        run: |
-          if [ -f reports/tfsec.sarif ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload tfsec SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.check_tfsec.outputs.exists == 'true'
-        with:
-          sarif_file: reports/tfsec.sarif
-          category: tfsec
 
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
@@ -112,50 +78,26 @@ jobs:
           quiet: true
           compact: true
           soft_fail_on: LOW,MEDIUM
-          baseline: baseline.json
 
-      - name: Check Checkov report existence
-        id: check_checkov
-        run: |
-          if [ -f reports/checkov.sarif ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload Checkov SARIF report
+      - name: Upload Security Reports
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.check_checkov.outputs.exists == 'true'
+        if: always()
         with:
-          sarif_file: reports/checkov.sarif
-          category: checkov
+          sarif_file: reports
+          category: terraform-security
 
       - name: Post Results Summary
         if: always()
         run: |
-          echo "summary<<EOF" >> "$GITHUB_STEP_SUMMARY"
           echo "### Terraform CI Results :rocket:" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Format Check" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`${{ steps.fmt.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Validation" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`${{ steps.validate.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f reports/tfsec.sarif ]; then
-            echo "#### TFSec Scan" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ Completed - Check Security tab for details" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f reports/checkov.sarif ]; then
-            echo "#### Checkov Scan" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ Completed - Check Security tab for details" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "EOF" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Terraform Checks" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`Status: ${{ steps.tf_init_validate.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Security Scans" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Completed - Check Security tab for details" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Set Job Outputs
-        id: set_outputs
+      - name: Set Job Status
+        if: always()
         run: |
-          echo "fmt_status=${{ steps.fmt.outcome }}" >> "$GITHUB_OUTPUT"
-          echo "validate_status=${{ steps.validate.outcome }}" >> "$GITHUB_OUTPUT"
-          if [ -f reports/tfsec.sarif ] && [ -f reports/checkov.sarif ]; then
-            echo "security_scans_complete=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "security_scans_complete=false" >> "$GITHUB_OUTPUT"
+          if [[ "${{ steps.tf_init_validate.outcome }}" == "failure" ]]; then
+            exit 1
           fi
