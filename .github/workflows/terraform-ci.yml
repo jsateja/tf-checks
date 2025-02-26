@@ -1,0 +1,125 @@
+name: Terraform CI
+
+on:
+  push:
+    paths:
+      - '**.tf'
+      - '**.tfvars.example'
+      - '.github/workflows/terraform-ci.yml'
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars.example'
+      - '.github/workflows/terraform-ci.yml'
+
+jobs:
+  terraform-checks:
+    name: Terraform Security & Format Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+      pull-requests: write  # Needed for PR comments
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.7.0"
+          terraform_wrapper: false
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Cache Terraform
+        uses: actions/cache@v3
+        with:
+          path: .terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: Initialize Terraform
+        id: init
+        run: terraform init -backend=false
+        continue-on-error: true
+
+      - name: Check Init Status
+        if: steps.init.outcome == 'failure'
+        run: |
+          echo "Terraform initialization failed!"
+          exit 1
+
+      - name: Validate Terraform
+        id: validate
+        run: terraform validate -json
+        continue-on-error: true
+
+      - name: Check Terraform Formatting
+        id: fmt
+        run: terraform fmt -check -recursive -diff
+        continue-on-error: true
+
+      - name: Run TFLint
+        uses: terraform-linters/tflint-action@v4
+        with:
+          format: compact
+          config: .tflint.hcl
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          soft_fail: true
+          format: sarif
+          out: tfsec.sarif
+          additional_args: --minimum-severity HIGH
+
+      - name: Upload tfsec SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: tfsec.sarif
+          category: tfsec
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          output_format: sarif
+          output_file: checkov.sarif
+          soft_fail: true
+          skip_check: CKV_AWS_* # Skip AWS checks since we're using Azure
+          download_external_modules: true
+          baseline: baseline.json
+
+      - name: Upload Checkov SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: hcl
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:hcl"
+
+      - name: Post Results Summary
+        if: always()
+        run: |
+          echo "### Terraform CI Results :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "#### Format Check" >> $GITHUB_STEP_SUMMARY
+          echo "\`${{ steps.fmt.outcome }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "#### Validation" >> $GITHUB_STEP_SUMMARY
+          echo "\`${{ steps.validate.outcome }}\`" >> $GITHUB_STEP_SUMMARY 
